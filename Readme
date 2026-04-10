@@ -1,0 +1,71 @@
+# 🏏 IPL Cricket Analytics System
+
+## Setup
+
+```bash
+pip install -r requirements.txt
+
+# Terminal 1 — Start API
+uvicorn main:app --reload
+
+# Terminal 2 — Start Dashboard
+streamlit run app.py
+```
+
+Visit `http://localhost:8501` for the dashboard.
+API docs at `http://localhost:8000/docs`.
+
+Login: **admin / admin123**
+
+---
+
+## Database Justification
+
+**PostgreSQL (OLTP)** was chosen because:
+- The system supports full CRUD (player notes, future bookings/team selection)
+- ACID guarantees matter for consistent stat reads and writes
+- Foreign key relationships between players, teams, and matches enforce data integrity
+- Historical IPL data (~hundreds of thousands of rows) is well within PostgreSQL's range
+
+An OLAP store (DuckDB/ClickHouse) would be faster for pure aggregations over millions of rows, but since this system includes transactional writes (scout notes, team management), a hybrid approach would be the production path: PostgreSQL as the operational store + a materialized view or DuckDB layer for dashboard queries.
+
+---
+
+## Guideline Compliance
+
+| Requirement | Status |
+|---|---|
+| Real-world dataset with enough volume | ✅ IPL ball-by-ball data |
+| Relational DB with justified choice | ✅ PostgreSQL (OLTP justified above) |
+| Schema with multiple tables | ✅ ipl_raw, ipl_matches, ipl_players, ipl_player_stats, ipl_bowler_stats, ipl_teams, player_notes |
+| FastAPI with CRUD endpoints | ✅ Full Create/Read/Update/Delete on player_notes |
+| Pydantic models for validation | ✅ All request/response models validated |
+| Authentication | ✅ JWT via OAuth2PasswordBearer |
+| ≥3 analytics endpoints | ✅ 8 analytics endpoints |
+| API docs via /docs | ✅ Auto-generated |
+| ≥3 visualizations in dashboard | ✅ Bar, scatter, histogram, pie, radar charts |
+| Dashboard refresh logic | ✅ Manual refresh button (justified: static historical data) |
+| ≥1 interactive filter/element | ✅ Season filter, min-balls slider, player search |
+
+---
+
+## Endpoints Summary
+
+### Auth
+- `POST /auth/login` — Get JWT token
+
+### Analytics (all require Bearer token)
+- `GET /top-players` — Top batters (filterable by min_balls, limit)
+- `GET /top-bowlers` — Top wicket-takers
+- `GET /top-teams` — Team run totals
+- `GET /matches-per-team` — Match counts
+- `GET /player-of-match` — POM award leaders
+- `GET /seasons` — Available seasons
+- `GET /team-wins-by-season` — Win counts (filterable by season)
+- `GET /player-search` — Search by name, returns batting + bowling stats
+
+### CRUD — Player Notes
+- `POST /notes` — Create note
+- `GET /notes` — Read notes (filterable by player name)
+- `PUT /notes/{id}` — Update note
+- `DELETE /notes/{id}` — Delete note
